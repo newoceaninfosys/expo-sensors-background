@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android", "web"],
+  "ios": {
+    "modules": ["ExpoSensorsBackgroundModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.sensorsbackground.ExpoSensorsBackgroundModule"]
+  }
+}
