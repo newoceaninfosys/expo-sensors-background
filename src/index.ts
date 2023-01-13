@@ -1,5 +1,5 @@
 import { NativeModulesProxy, EventEmitter, Subscription } from 'expo-modules-core';
-
+import { SensorTaskOptions} from './Sensor.types';
 // Import the native module. On web, it will be resolved to ExpoSensorsBackground.web.ts
 // and on native platforms to ExpoSensorsBackground.ts
 import ExpoSensorsBackgroundModule from './ExpoSensorsBackgroundModule';
@@ -16,6 +16,15 @@ export function hello(): string {
 export async function setValueAsync(value: string) {
   return await ExpoSensorsBackgroundModule.setValueAsync(value);
 }
+
+
+export async function start(taskName:string, options: SensorTaskOptions = {}) {
+  return await ExpoSensorsBackgroundModule.start(taskName,options);
+}
+export async function stop(taskName:string) {
+  return await ExpoSensorsBackgroundModule.stop(taskName);
+}
+
 
 const emitter = new EventEmitter(ExpoSensorsBackgroundModule ?? NativeModulesProxy.ExpoSensorsBackground);
 
