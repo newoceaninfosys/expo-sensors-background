@@ -1,10 +1,9 @@
 import { NativeModulesProxy, EventEmitter, Subscription } from 'expo-modules-core';
-import { SensorTaskOptions} from './Sensor.types';
 // Import the native module. On web, it will be resolved to ExpoSensorsBackground.web.ts
 // and on native platforms to ExpoSensorsBackground.ts
 import ExpoSensorsBackgroundModule from './ExpoSensorsBackgroundModule';
 import ExpoSensorsBackgroundView from './ExpoSensorsBackgroundView';
-import { ChangeEventPayload, ExpoSensorsBackgroundViewProps } from './ExpoSensorsBackground.types';
+import { ChangeEventPayload, ExpoSensorsBackgroundViewProps, SensorTaskOptions,SensorDelay } from './ExpoSensorsBackground.types';
 
 // Get the native constant value.
 export const PI = ExpoSensorsBackgroundModule.PI;
@@ -19,12 +18,26 @@ export async function setValueAsync(value: string) {
 
 
 export async function start(taskName:string, options: SensorTaskOptions = {}) {
-  return await ExpoSensorsBackgroundModule.start(taskName,options);
+  let cloneOptions = {};
+  if(options.delay == undefined){
+    cloneOptions = {
+      ...options,
+      delay: SensorDelay.SENSOR_DELAY_FASTEST,
+    }
+  }
+  else {
+    cloneOptions = options
+  }
+  return await ExpoSensorsBackgroundModule.start(taskName,cloneOptions);
 }
+
 export async function stop(taskName:string) {
   return await ExpoSensorsBackgroundModule.stop(taskName);
 }
 
+export async function watch(options: SensorTaskOptions = {}) {
+  return await ExpoSensorsBackgroundModule.watch(options);
+}
 
 const emitter = new EventEmitter(ExpoSensorsBackgroundModule ?? NativeModulesProxy.ExpoSensorsBackground);
 

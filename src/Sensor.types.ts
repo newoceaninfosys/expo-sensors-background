@@ -3,10 +3,26 @@
 /**
  * Type representing options argument in `getCurrentPositionAsync`.
  */
+export enum SensorDelay {
+   
+  SENSOR_DELAY_FASTEST = 0,
+   
+  SENSOR_DELAY_GAME = 1,
+   
+  SENSOR_DELAY_UI = 2,
+   
+  SENSOR_DELAY_NORMAL = 3,
+}
+
+
 export type SensorOptions = {
+   /**
+     * Minimum time to wait between each update in milliseconds.
+     * @platform android
+     */
+    delay?: SensorDelay;
     /**
      * Minimum time to wait between each update in milliseconds.
-     * Default value may depend on `accuracy` option.
      * @platform android
      */
     timeInterval?: number;

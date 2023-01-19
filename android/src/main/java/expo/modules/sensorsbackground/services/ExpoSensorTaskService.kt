@@ -1,24 +1,38 @@
 package expo.modules.sensorsbackground.services
 
 import android.app.*
+import android.app.PendingIntent.getService
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Binder
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import androidx.annotation.Nullable
 import androidx.annotation.RequiresApi
 
 
 class ExpoSensorTaskService:Service() {
+    private val TAG:String = "SensorTaskService"
     private var mServiceId:Int = 1234
     private var mChannelId:String = "SensorBackground"
     private var mParentContext: Context? = null
     private var mKillService = false
-    fun stop() {
-        stopForeground(true)
+    private var mBinder: IBinder = LocalBinder()
+
+    inner class LocalBinder : Binder() {
+        fun getService() : ExpoSensorTaskService {
+            return this@ExpoSensorTaskService
+        }
     }
+
+    override fun onBind(intent: Intent): IBinder? {
+        return mBinder;
+    }
+
+
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         val extras = intent.extras
@@ -29,14 +43,15 @@ class ExpoSensorTaskService:Service() {
         return START_REDELIVER_INTENT
     }
 
-    override fun onBind(p0: Intent?): IBinder? {
-        TODO("Not yet implemented")
-    }
-
     override fun onTaskRemoved(rootIntent: Intent?) {
         if (mKillService) {
             super.onTaskRemoved(rootIntent)
+            stop();
         }
+    }
+
+    fun stop() {
+        stopForeground(true)
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -44,6 +59,13 @@ class ExpoSensorTaskService:Service() {
         Log.w("ExpoSensorTaskSer","startForeground()")
         val notification: Notification? = buildServiceNotification(serviceOptions)
         startForeground(mServiceId, notification)
+    }
+
+
+    fun setParentContext(context: Context) {
+        // Background Sensor logic is still outside ExpoSensorTaskService,
+        // so we have to save parent context in order to make sure it won't be destroyed by the OS.
+        mParentContext = context
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -107,11 +129,4 @@ class ExpoSensorTaskService:Service() {
             null
         }
     }
-
-    fun setParentContext(context: Context) {
-        // Background Sensor logic is still outside ExpoSensorTaskService,
-        // so we have to save parent context in order to make sure it won't be destroyed by the OS.
-        mParentContext = context
-    }
-
 }

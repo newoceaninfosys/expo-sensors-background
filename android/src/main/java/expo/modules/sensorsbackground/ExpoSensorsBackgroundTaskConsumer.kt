@@ -4,9 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Build
-import android.os.Bundle
-import android.os.IBinder
+import android.os.*
 import android.util.Log
 import androidx.annotation.RequiresApi
 import expo.modules.core.arguments.MapArguments
@@ -19,6 +17,11 @@ import expo.modules.interfaces.taskManager.TaskManagerUtilsInterface
 import expo.modules.sensorsbackground.services.ExpoSensorService
 import expo.modules.sensorsbackground.services.ExpoSensorTaskService
 
+import java.io.Serializable
+import java.util.*
+import kotlinx.coroutines.*
+import kotlin.math.roundToInt
+
 
 class ExpoSensorsBackgroundTaskConsumer(context: Context?, taskManagerUtils: TaskManagerUtilsInterface?) : TaskConsumer(context, taskManagerUtils),
     TaskConsumerInterface, LifecycleEventListener {
@@ -27,6 +30,7 @@ class ExpoSensorsBackgroundTaskConsumer(context: Context?, taskManagerUtils: Tas
     private var mTask: TaskInterface? = null
     private val TAG:String = "EXSensorsBgTaskConsumer"
     private val FOREGROUND_SERVICE_KEY = "foregroundService"
+    private var lastCurrent:Long =0;
     override fun onHostResume() {
         Log.w(TAG, "onHostResume()")
 
@@ -44,25 +48,23 @@ class ExpoSensorsBackgroundTaskConsumer(context: Context?, taskManagerUtils: Tas
         Log.w(TAG, "taskType()")
         return "sensors"
     }
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun didRegister(task: TaskInterface?) {
         Log.w(TAG, "didRegister()")
-        mTask = task;
-        expoServiceSensor = ExpoSensorService();
-        expoServiceSensor!!.start(context);
+        mTask = task
+        startSensorUpdates()
         maybeStartForegroundService()
-
     }
 
     override fun didUnregister() {
         Log.w(TAG, "didUnregister()")
-        mTask = null;
-        expoServiceSensor!!.stop()
+        mTask = null
+        stopForegroundService()
+        stopSensorUpdates()
     }
 
-
-
     private fun shouldUseForegroundService(options: Map<String,Object?>): Boolean {
-        return options.containsKey(FOREGROUND_SERVICE_KEY);
+        return options.containsKey(FOREGROUND_SERVICE_KEY)
     }
 
     private fun maybeStartForegroundService() {
@@ -111,10 +113,9 @@ class ExpoSensorsBackgroundTaskConsumer(context: Context?, taskManagerUtils: Tas
             context.bindService(serviceIntent, object : ServiceConnection {
                 @RequiresApi(Build.VERSION_CODES.O)
                 override fun onServiceConnected(name: ComponentName, service: IBinder) {
-//                    mService = (service as ExpoSensorTaskService.ServiceBinder).getService()
-                    mService = ExpoSensorTaskService();
-                    mService!!.setParentContext(context)
-                    mService!!.startForeground(serviceOptions)
+                    mService = (service as ExpoSensorTaskService.LocalBinder).getService()
+                    mService?.setParentContext(context)
+                    mService?.startForeground(serviceOptions)
                 }
 
                 override fun onServiceDisconnected(name: ComponentName) {
@@ -125,14 +126,50 @@ class ExpoSensorsBackgroundTaskConsumer(context: Context?, taskManagerUtils: Tas
         } else {
             Log.w(TAG, "Restart the service")
             // Restart the service with new service options.
-            mService!!.startForeground(optionsMap.getArguments(FOREGROUND_SERVICE_KEY).toBundle())
+            mService?.startForeground(optionsMap.getArguments(FOREGROUND_SERVICE_KEY).toBundle())
         }
     }
 
     private fun stopForegroundService() {
         mService?.stop()
+    }
+    private fun mapToBundle(map: Map<String, Any>): Bundle {
+        val result = Bundle()
+//        if (map == null) return result
+        for (key in map.keys) {
+            result.putSerializable(key, map[key] as Serializable?)
+        }
+        return result
+    }
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun startSensorUpdates(){
+        val mUpdateInteval:Int? = mTask!!.options.get("timeInterval").toString().toDouble().roundToInt()
 
+        expoServiceSensor = ExpoSensorService()
+        expoServiceSensor?.addListener{ data: SensorData ->
+            var current = System.currentTimeMillis()
+            var map :Map<String,Any>? = mapOf("x" to data.x,"y" to data.y,"z" to data.z)
+
+            if((current - lastCurrent) > mUpdateInteval!!){
+                mTask!!.execute(mapToBundle(map!!), null)
+
+                lastCurrent = current
+            }
+
+
+        }
+        expoServiceSensor!!.delaySensor(mTask!!.options.get("timeInterval") as Number)
+        expoServiceSensor!!.start(context)
+    }
+
+    private fun stopSensorUpdates(){
+        expoServiceSensor?.removeListener()
+        expoServiceSensor?.stop()
     }
 }
+
+
+
+
 
 
