@@ -1,2 +1,9 @@
-<manifest package="expo.modules.sensorsbackground">
+<manifest package="expo.modules.sensorsbackground" xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <application>
+        <service
+            android:name=".services.ExpoSensorTaskService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+    </application>
 </manifest>
