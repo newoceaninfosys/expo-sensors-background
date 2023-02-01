@@ -36,13 +36,27 @@ export async function stop(taskName:string) {
 }
 
 export async function watch(options: SensorTaskOptions = {}) {
-  return await ExpoSensorsBackgroundModule.watch(options);
+  await ExpoSensorsBackgroundModule.watch(options);
+  return {
+    remove() {
+      ExpoSensorsBackgroundModule.stopWatch();
+    },
+  };
 }
-
+// export async function stopWatch() {
+//   return await ExpoSensorsBackgroundModule.stopWatch();
+// }
+export async function hasStarted(taskName: string) {
+  if (!taskName || typeof taskName !== 'string') {
+    throw new Error(`\`taskName\` must be a non-empty string. Got ${taskName} instead.`);
+  }
+  return ExpoSensorsBackgroundModule.hasStarted(taskName);
+}
 const emitter = new EventEmitter(ExpoSensorsBackgroundModule ?? NativeModulesProxy.ExpoSensorsBackground);
 
-export function addChangeListener(listener: (event: ChangeEventPayload) => void): Subscription {
-  return emitter.addListener<ChangeEventPayload>('onChange', listener);
+
+export function addChangeListener(listener: (event: any) => void): Subscription {
+  return emitter.addListener('onChange', listener);
 }
 
 export { ExpoSensorsBackgroundView, ExpoSensorsBackgroundViewProps, ChangeEventPayload };

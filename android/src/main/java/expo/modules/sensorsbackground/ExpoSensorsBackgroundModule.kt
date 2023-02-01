@@ -1,18 +1,19 @@
 package expo.modules.sensorsbackground
 
-import android.os.Bundle
 import android.util.Log
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import com.google.gson.Gson;
+import com.google.gson.Gson
 import expo.modules.sensorsbackground.services.ExpoSensorService
-import java.io.Serializable
 
 class ExpoSensorsBackgroundModule : Module() {
     // Each module class must implement the definition function. The definition consists of components
     // that describes the module's functionality and behavior.
     // See https://docs.expo.dev/modules/module-api for more details about available components.
+
+    private val expoServiceSensor = ExpoSensorService()
+
     override fun definition() = ModuleDefinition {
         // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
         // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
@@ -41,36 +42,39 @@ class ExpoSensorsBackgroundModule : Module() {
             ))
         }
         AsyncFunction("watch") {options: SensorBackgroundOptions ->
-            // Send an event to JavaScript.
-//            sendEvent("onChange", mapOf(
-//                "value" to value
-//            ))
-            fun mapToBundle(map: Map<String, Any>): Bundle {
-                val result = Bundle()
-//        if (map == null) return result
-                for (key in map.keys) {
-                    result.putSerializable(key, map[key] as Serializable?)
-                }
-                return result
-            }
+            Log.i("ExpoSensors", "watch")
             val mUpdateInteval:Int? = options.timeInterval
-            var lastCurrent:Long? = 0;
-            val expoServiceSensor = ExpoSensorService()
-            expoServiceSensor?.addListener{ data: SensorData ->
+            var lastCurrent:Long? = 0
+
+            expoServiceSensor.addListener{ data: SensorData ->
                 var current = System.currentTimeMillis()
 
                 if((current - lastCurrent!!) > mUpdateInteval!!){
-                    sendEvent("onChange", mapOf(
-                "x" to data.x,"y" to data.y,"z" to data.z
-            ))
+                    sendEvent("onChange", mapOf("x" to data.x,"y" to data.y,"z" to data.z))
 
                     lastCurrent = current
                 }
 
 
             }
-            expoServiceSensor!!.delaySensor(options.delay!!)
-            expoServiceSensor!!.start(appContext.reactContext)
+            expoServiceSensor.delaySensor(options.delay!!)
+            expoServiceSensor.start(appContext.reactContext)
+
+            sendEvent("onChange", mapOf(
+                "value" to "123"
+            ))
+        }
+
+        AsyncFunction("stopWatch") { promise: Promise ->
+            Log.i("ExpoSensors", "stopWatch")
+            expoServiceSensor?.removeListener()
+            expoServiceSensor?.stop()
+            promise.resolve(null)
+        }
+
+        AsyncFunction("hasStarted") { taskName: String, promise: Promise ->
+            Log.i("ExpoSensors", "hasStarted")
+            promise.resolve(appContext.taskManager!!.taskHasConsumerOfClass(taskName, ExpoSensorsBackgroundTaskConsumer::class.java))
         }
 
 

@@ -1,7 +1,7 @@
-import { StyleSheet, Text, View,TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import * as TaskManager from "expo-task-manager";
 import * as ExpoSensorsBackground from "expo-sensors-background";
-import { useEffect ,useState} from "react";
+import { useEffect, useRef,useState } from "react";
 
 const TASK_NAME = "background-sensor-task";
  // shake api
@@ -39,10 +39,11 @@ TaskManager.defineTask(TASK_NAME, ({ data, error }) => {
   }
 });
 export default function App() {
-  const start = ()=>{
+  let removeWatch: any = useRef(null);
+  const start = () => {
     ExpoSensorsBackground.start(TASK_NAME, {
-      delay:3,
-      timeInterval:100,
+      delay: 3,
+      timeInterval: 100,
       foregroundService: {
         killServiceOnDestroy: true,
         notificationBody: "App is running....",
@@ -53,21 +54,27 @@ export default function App() {
   }
   const stop = ()=>{
     ExpoSensorsBackground.stop(TASK_NAME);
-  }
-  useEffect(() => {
-    // start()
-    ExpoSensorsBackground.watch({
-      delay:3,
-      timeInterval:100,
+  };
+  const watchAsync = async () => {
+    const watch = await ExpoSensorsBackground.watch({
+      delay: 3,
+      timeInterval: 100,
     });
-  ExpoSensorsBackground.addChangeListener((data) => {
-      // const {x, y, z}: any = data;
-      // console.log(x,y,z,"Date: ",Date.now());
-      console.log(data)
-    })
+    removeWatch.current = watch;
+    ExpoSensorsBackground.setValueAsync("abc")
+  };
 
-    return () => {
-    };
+  const stopWatchAsync = () => {
+    if (removeWatch.current == null) throw new Error("watch does not exist");
+    return removeWatch.current.remove();
+  };
+
+  useEffect(() => {
+    ExpoSensorsBackground.addChangeListener((data)=>{
+      console.log(data)
+    });
+      watchAsync()
+    return () => {stopWatchAsync()};
   }, []);
 
   return (
@@ -80,6 +87,15 @@ export default function App() {
         </TouchableOpacity>
         <TouchableOpacity onPress={()=> stop()} style={styles.button}>
           <Text>Stop</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => watchAsync()} style={styles.button}>
+          <Text>Watch</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => stopWatchAsync()}
+          style={styles.button}
+        >
+          <Text>Stop Watch</Text>
         </TouchableOpacity>
       </View>
     </View>
